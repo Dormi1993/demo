@@ -17,26 +17,47 @@
 
 package com.fcjexample.demo.test.multithread;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.Callable;
 
 public class CallFcjClass implements Callable<String> {
 
-    @Override public String call() throws Exception {
-        /**
-         try {
-         Thread.sleep(1000);
-         int a = 8 / 0;
-         return "Call: " + Thread.currentThread().getName();
-         } catch (Exception e) {
-         //                System.out.println("call fcj: " + e.getMessage());
-         LOGGER.error("call fcj failed. ", e);
-         //                throw e;
-         }
-         return null;
-         **/
+    private static final Logger LOGGER = LoggerFactory.getLogger(CallFcjClass.class);
 
-        Thread.sleep(1000);
-        int a = 8 / 0;
-        return "Call: " + Thread.currentThread().getName();
+    @Override public String call() throws Exception {
+        try {
+            //            Thread.sleep(1000);
+            //            int a = 8 / 0;
+
+            LOGGER.info("callha!!");
+
+            //            while (true) {
+            //                //                Thread.sleep(500);// 无用
+            //                if (1 == 3) {
+            //                    break;
+            //                }
+            //            }
+
+            for (int i = 0; i < 500000; i++) {
+                if (i % 10000 == 0) {
+                    //                    Thread.sleep(50);
+                    LOGGER.info("by 1000, name is: {}", Thread.currentThread().getName());
+                }
+            }
+
+            LOGGER.info("callha end!! name is: {}", Thread.currentThread().getName());
+            return "Call: " + Thread.currentThread().getName();
+        } catch (Exception e) {
+            //                System.out.println("call fcj: " + e.getMessage());
+            LOGGER.error("call fcj failed. ", e);
+            //            throw e; 如果没有logger.error，并且外面没有future.get()，即使throw e也没有用的。
+        }
+        return null;
+
+        //        Thread.sleep(1000);
+        //        int a = 8 / 0;
+        //        return "Call: " + Thread.currentThread().getName();
     }
 }

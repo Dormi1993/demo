@@ -3,6 +3,7 @@ package com.fcjexample.demo.controller;
 import com.fcjexample.demo.model.ApiResult;
 import com.fcjexample.demo.model.TestEntity;
 import com.fcjexample.demo.service.DataViewService;
+import com.fcjexample.demo.service.HelloService;
 import com.fcjexample.demo.util.exception.DataViewException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,14 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.WebAsyncTask;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.HandlerMapping;
 
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeoutException;
 
 @RestController
 @RequestMapping("/hello")
@@ -29,13 +30,94 @@ public class HelloController {
     @Autowired
     DataViewService dataViewService;
 
+    @Autowired
+    private HelloService hello;
+
+    @Autowired
+    ApplicationContext context;
+
     @RequestMapping("/hhh")
     public Object helloha() {
         return "hello haha fcjdormi";
     }
 
-    @Autowired
-    ApplicationContext context;
+    @RequestMapping("/hhh02")
+    public Object helloha02(@RequestBody String rawExternal) {
+        return rawExternal + "hello haha fcjdormi";
+    }
+
+    @RequestMapping("/hhh03")
+    public Object helloha03(@RequestBody TestEntity entity) {
+        return entity.getName() + "hello haha fcjdormi";
+    }
+
+    @GetMapping("/test01")
+    public String test01Controller() {
+        LOGGER.info(Thread.currentThread().getName() + " 进入test01Controller方法");
+        String result = hello.sayHello();
+        LOGGER.info(Thread.currentThread().getName() + " 从test01Controller方法返回");
+        return result;
+    }
+
+    @GetMapping("/helloha")
+    public Callable<String> helloController() {
+        LOGGER.info(Thread.currentThread().getName() + " 进入helloController方法");
+        Callable<String> callable = new Callable<String>() {
+
+            @Override
+            public String call() throws Exception {
+                LOGGER.info(Thread.currentThread().getName() + " 进入call方法");
+                String say = hello.sayHello();
+                LOGGER.info(Thread.currentThread().getName() + " 从helloService方法返回");
+                return say;
+            }
+        };
+        LOGGER.info(Thread.currentThread().getName() + " 从helloController方法返回");
+        return callable;
+    }
+
+    /**
+     * 带超时时间的异步请求 通过WebAsyncTask自定义客户端超时间
+     *
+     * @return
+     */
+    @GetMapping("/world01")
+    public WebAsyncTask<String> worldController() {
+        LOGGER.info(Thread.currentThread().getName() + " 进入helloController方法");
+
+        // 5s钟没返回，则认为超时
+        WebAsyncTask<String> webAsyncTask = new WebAsyncTask<>(5000, new Callable<String>() {
+
+            @Override
+            public String call() throws Exception {
+                LOGGER.info(Thread.currentThread().getName() + " 进入call方法");
+                String say = hello.sayHello();
+                LOGGER.info(Thread.currentThread().getName() + " 从helloService方法返回");
+                return say;
+            }
+        });
+
+        LOGGER.info(Thread.currentThread().getName() + " 从helloController方法返回");
+
+        webAsyncTask.onCompletion(new Runnable() {
+
+            @Override
+            public void run() {
+                LOGGER.info(Thread.currentThread().getName() + " 执行完毕");
+            }
+        });
+
+        webAsyncTask.onTimeout(new Callable<String>() {
+
+            @Override
+            public String call() throws Exception {
+                LOGGER.info(Thread.currentThread().getName() + " onTimeout");
+                // 超时的时候，直接抛异常，让外层统一处理超时异常
+                throw new TimeoutException("调用超时");
+            }
+        });
+        return webAsyncTask;
+    }
 
     @RequestMapping(value = "/test")
     public String handleRequest() {
@@ -68,7 +150,7 @@ public class HelloController {
             //                        String res = dataViewService.publishDataView(tenant);
             String s = dataViewService.testStringException(tenant);
 
-            return "eee";
+            return s;
         } catch (Exception e) {
             LOGGER.error("testExceptionInternal failed for {}", tenant, e);
             throw e;

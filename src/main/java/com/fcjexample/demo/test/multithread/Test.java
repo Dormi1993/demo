@@ -33,7 +33,7 @@ public class Test {
         int replayThreadCount = 4;
         ExecutorService signoffThreadPool = Executors.newFixedThreadPool(replayThreadCount);
 
-        ExecutorService signoffThreadPool2 = new ThreadPoolExecutor(4, 6, 0, TimeUnit.SECONDS,
+        ExecutorService signoffThreadPool2 = new ThreadPoolExecutor(30, 30, 0, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<Runnable>(100), new ThreadFactory() {
             AtomicInteger integer = new AtomicInteger();
 
@@ -42,7 +42,17 @@ public class Test {
             }
         });
 
-        int count = 20;
+        //
+        ScheduledExecutorService executorService = Executors.newScheduledThreadPool(4,
+                new ThreadFactory() {
+                    AtomicInteger integer = new AtomicInteger();
+
+                    @Override public Thread newThread(Runnable r) {
+                        return new Thread(r, "testfcj-consumer-" + integer.getAndIncrement());
+                    }
+                });
+
+        int count = 40;
         List<Future> futureList = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             //            futureList.add(signoffThreadPool.submit(new ConsumerSignoff()));
@@ -51,15 +61,32 @@ public class Test {
             try {
 
                 futureList.add(signoffThreadPool2.submit(new CallFcjClass()));
+
+                //                futureList.add(executorService.scheduleWithFixedDelay(new Runnable() {
+                //                    @Override public void run() {
+                //                        try {
+                //                            Thread.sleep(1000);
+                //                        } catch (InterruptedException e) {
+                //                            e.printStackTrace();
+                //                        }
+                //                        //            int a = 8 / 0;
+                //
+                //                        LOGGER.info("callha02!!");
+                //                    }
+                //                }, 200, 200, TimeUnit.MILLISECONDS));
             } catch (Exception e) {
                 LOGGER.error("submit failed. ", e);
             }
+
+            LOGGER.info("fcjha01 finished.");
 
         }
 
         for (Future future : futureList) {
             try {
-                System.out.println("result: " + future.get());
+                // CallFcjClass线程池里的抛错，如果没有future.get()，这外面是不会看到报错的。所以最好在线程池里自己try catch住打log。
+                //                System.out.println("result: " + future.get());
+
             } catch (Exception e) {
                 LOGGER.error("get() failed. ", e);
             }
@@ -91,25 +118,4 @@ public class Test {
         }
     }
 
-    //    static class CallFcjClass implements Callable<String> {
-    //
-    //        @Override public String call() throws Exception {
-    //            /**
-    //             try {
-    //             Thread.sleep(1000);
-    //             int a = 8 / 0;
-    //             return "Call: " + Thread.currentThread().getName();
-    //             } catch (Exception e) {
-    //             //                System.out.println("call fcj: " + e.getMessage());
-    //             LOGGER.error("call fcj failed. ", e);
-    //             //                throw e;
-    //             }
-    //             return null;
-    //             **/
-    //
-    //            Thread.sleep(1000);
-    //            int a = 8 / 0;
-    //            return "Call: " + Thread.currentThread().getName();
-    //        }
-    //    }
 }
